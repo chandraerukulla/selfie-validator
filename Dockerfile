@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
     libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
     libxfixes3 libxrandr2 libgbm1 libasound2t64 \
     libpango-1.0-0 libcairo2 libatspi2.0-0 \
-    fonts-unifont \
+    fonts-unifont libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
