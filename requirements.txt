@@ -1,0 +1,8 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+opencv-python-headless==4.10.0.84
+mediapipe==0.10.14
+playwright==1.49.0
+pydantic==2.10.3
+httpx==0.27.2

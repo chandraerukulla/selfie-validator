@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: selfie-validator
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
