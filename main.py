@@ -11,11 +11,17 @@ from pydantic import BaseModel
 
 app = FastAPI(title="Selfie Validator")
 
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+frontend_dir = Path(__file__).parent / "frontend"
+if frontend_dir.exists():
+    app.mount("/app", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
 
 @app.get("/")
 async def root():
     from fastapi.responses import RedirectResponse
-    return RedirectResponse(url="/docs")
+    return RedirectResponse(url="/app/")
 
 app.add_middleware(
     CORSMiddleware,

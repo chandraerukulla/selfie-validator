@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Selfie Verification</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue: #1d70b8;
+      --blue-dark: #144e86;
+      --green: #00703c;
+      --red: #d4351c;
+      --grey-50: #f8fafc;
+      --grey-100: #f1f4f8;
+      --grey-200: #e2e8f0;
+      --grey-400: #94a3b8;
+      --grey-600: #475569;
+      --grey-900: #0f172a;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--grey-100);
+      min-height: 100vh;
+      color: var(--grey-900);
+    }
+
+    header {
+      background: var(--blue);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-badge {
+      background: white;
+      color: var(--blue);
+      font-weight: 800;
+      font-size: 13px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .header-title { color: white; font-size: 15px; font-weight: 600; }
+
+    .page {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
+      padding: 36px 40px;
+      margin-bottom: 24px;
+    }
+
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { font-size: 14px; color: var(--grey-600); margin-bottom: 28px; }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      border: 2px dashed var(--grey-200);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+      background: var(--grey-50);
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--blue);
+      background: #eef4fb;
+    }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-icon { margin-bottom: 12px; color: var(--grey-400); }
+    .upload-label { font-size: 15px; font-weight: 600; color: var(--grey-900); margin-bottom: 4px; }
+    .upload-hint { font-size: 13px; color: var(--grey-400); }
+
+    .preview-wrap {
+      display: none;
+      position: relative;
+      margin-top: 16px;
+    }
+    .preview-wrap img {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 10px;
+      border: 1.5px solid var(--grey-200);
+      background: var(--grey-50);
+    }
+    .remove-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: rgba(0,0,0,0.55);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px; height: 28px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+
+    /* ── Fields ── */
+    .field { margin-bottom: 20px; }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--grey-600);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .hint { font-size: 12px; color: var(--grey-400); margin-bottom: 6px; }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--grey-200);
+      border-radius: 10px;
+      font-size: 15px;
+      color: var(--grey-900);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      background: var(--grey-50);
+    }
+    input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(29,112,184,0.12);
+      background: white;
+    }
+    .dob-row { display: grid; grid-template-columns: 72px 72px 100px; gap: 10px; }
+    .dob-field label { text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--grey-400); }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background 0.15s;
+      margin-top: 8px;
+    }
+    .btn-primary:hover { background: var(--blue-dark); }
+    .btn-primary:disabled { background: var(--grey-400); cursor: not-allowed; }
+
+    .btn-ghost {
+      background: none;
+      border: 1.5px solid var(--grey-200);
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--grey-600);
+      transition: background 0.15s;
+    }
+    .btn-ghost:hover { background: var(--grey-100); }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Status banners ── */
+    .banner {
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .banner.error { background: #fff5f5; border: 1.5px solid #feb2b2; color: var(--red); }
+    .banner.warning { background: #fffbeb; border: 1.5px solid #fcd34d; color: #92400e; }
+    .banner.success { background: #f0fdf4; border: 1.5px solid #86efac; color: #166534; }
+    .banner strong { display: block; margin-bottom: 3px; font-size: 15px; }
+    .banner ul { margin: 6px 0 0 18px; }
+
+    /* ── Result photo ── */
+    .result-hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+      border-radius: 14px;
+      padding: 28px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+    .result-photo {
+      width: 100px;
+      height: 125px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 3px solid rgba(255,255,255,0.2);
+      flex-shrink: 0;
+    }
+    .result-photo-placeholder {
+      width: 100px;
+      height: 125px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.08);
+      border: 2px dashed rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .result-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 8px;
+    }
+    .result-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 10px;
+    }
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .source-badge.selfie { background: rgba(0,112,60,0.25); color: #6ee7b7; border: 1px solid rgba(0,112,60,0.4); }
+    .source-badge.sharecode { background: rgba(29,112,184,0.25); color: #93c5fd; border: 1px solid rgba(29,112,184,0.4); }
+
+    .result-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      background: rgba(255,255,255,0.12);
+      color: white;
+      transition: background 0.15s;
+    }
+    .btn-download:hover { background: rgba(255,255,255,0.2); }
+
+    .divider { border: none; border-top: 1.5px solid var(--grey-100); margin: 20px 0; }
+
+    /* ── Steps indicator ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 28px;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--grey-400);
+    }
+    .step.active { color: var(--blue); }
+    .step.done { color: var(--green); }
+    .step-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .step.done .step-num { background: var(--green); border-color: var(--green); color: white; }
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: var(--grey-200);
+      margin: 0 8px;
+    }
+    .step-line.done { background: var(--green); }
+
+    @media (max-width: 520px) {
+      .card { padding: 24px 20px; }
+      .result-hero { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .dob-row { grid-template-columns: 1fr 1fr 1fr; }
+      .step span:not(.step-num) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="header-badge">UK</span>
+  <span class="header-title">Selfie Verification</span>
+</header>
+
+<div class="page">
+
+  <!-- Steps -->
+  <div class="steps" id="steps">
+    <div class="step active" id="step1">
+      <span class="step-num">1</span>
+      <span>Upload selfie</span>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step" id="step2">
+      <span class="step-num">2</span>
+      <span>Verify</span>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step" id="step3">
+      <span class="step-num">3</span>
+      <span>Result</span>
+    </div>
+  </div>
+
+  <!-- Step 1: Upload selfie -->
+  <div class="card" id="section-upload">
+    <h1>Upload your selfie</h1>
+    <p class="subtitle">We'll check it's clear, your eyes are open, and you're looking straight at the camera.</p>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept="image/*" />
+      <div class="upload-icon">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="M21 15l-5-5L5 21"/>
+        </svg>
+      </div>
+      <div class="upload-label">Click to choose a photo</div>
+      <div class="upload-hint">JPG, PNG — max 10 MB</div>
+    </div>
+
+    <div class="preview-wrap" id="preview-wrap">
+      <img id="preview-img" src="" alt="Preview" />
+      <button class="remove-btn" onclick="removeImage()" title="Remove">✕</button>
+    </div>
+
+    <div class="banner error" id="upload-error"></div>
+
+    <button class="btn-primary" id="check-btn" onclick="validateSelfie()" disabled>
+      <div class="spinner" id="check-spinner"></div>
+      <span id="check-text">Check selfie</span>
+    </button>
+  </div>
+
+  <!-- Step 2: Sharecode fallback (shown only if selfie fails) -->
+  <div class="card" id="section-sharecode" style="display:none">
+    <h1>Selfie didn't pass</h1>
+
+    <div class="banner warning" id="fail-reasons" style="display:block">
+      <strong>Issues found with your selfie</strong>
+      <ul id="fail-list"></ul>
+    </div>
+
+    <p class="subtitle">Please provide your share code and date of birth so we can retrieve your photo on record.</p>
+
+    <div class="field">
+      <label for="share-code">Share code</label>
+      <p class="hint">9-character code, e.g. W9X3M2T4K</p>
+      <input type="text" id="share-code" placeholder="W9X3M2T4K" maxlength="12" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label>Date of birth</label>
+      <p class="hint">For example, 27 3 1990</p>
+      <div class="dob-row">
+        <div class="dob-field">
+          <label for="dob-day">Day</label>
+          <input type="number" id="dob-day" min="1" max="31" placeholder="DD" />
+        </div>
+        <div class="dob-field">
+          <label for="dob-month">Month</label>
+          <input type="number" id="dob-month" min="1" max="12" placeholder="MM" />
+        </div>
+        <div class="dob-field">
+          <label for="dob-year">Year</label>
+          <input type="number" id="dob-year" min="1900" max="2100" placeholder="YYYY" />
+        </div>
+      </div>
+    </div>
+
+    <div class="banner error" id="sharecode-error"></div>
+
+    <button class="btn-primary" id="fetch-btn" onclick="fetchSharecodePhoto()">
+      <div class="spinner" id="fetch-spinner"></div>
+      <span id="fetch-text">Retrieve photo</span>
+    </button>
+
+    <hr class="divider" />
+    <button class="btn-ghost" onclick="startOver()">← Upload a different selfie</button>
+  </div>
+
+  <!-- Step 3: Result -->
+  <div class="card" id="section-result" style="display:none">
+    <h1>Verification complete</h1>
+    <p class="subtitle" id="result-subtitle"></p>
+
+    <div class="result-hero">
+      <img class="result-photo" id="result-photo" src="" alt="Photo" style="display:none" />
+      <div class="result-photo-placeholder" id="result-placeholder">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="white" opacity="0.3"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+      </div>
+      <div>
+        <div class="result-label">Photo source</div>
+        <div class="result-title" id="result-source-label">—</div>
+        <div class="result-actions">
+          <a class="btn-download" id="download-photo" download="photo.jpg" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download photo
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-ghost" onclick="startOver()">← Start again</button>
+  </div>
+
+</div>
+
+<script>
+  const API = window.location.protocol === "file:" ? "http://localhost:8001" : "";
+  let selectedFile = null;
+
+  // ── File input ──────────────────────────────────────────────────────────────
+  const fileInput = document.getElementById("file-input");
+  const uploadZone = document.getElementById("upload-zone");
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) selectFile(fileInput.files[0]);
+  });
+
+  uploadZone.addEventListener("dragover", e => { e.preventDefault(); uploadZone.classList.add("dragover"); });
+  uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("dragover"));
+  uploadZone.addEventListener("drop", e => {
+    e.preventDefault();
+    uploadZone.classList.remove("dragover");
+    if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
+  });
+
+  function selectFile(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById("preview-img").src = e.target.result;
+      document.getElementById("preview-wrap").style.display = "block";
+    };
+    reader.readAsDataURL(file);
+    document.getElementById("check-btn").disabled = false;
+    document.getElementById("upload-error").style.display = "none";
+  }
+
+  function removeImage() {
+    selectedFile = null;
+    fileInput.value = "";
+    document.getElementById("preview-wrap").style.display = "none";
+    document.getElementById("preview-img").src = "";
+    document.getElementById("check-btn").disabled = true;
+  }
+
+  // ── Step 1: Validate selfie ─────────────────────────────────────────────────
+  async function validateSelfie() {
+    if (!selectedFile) return;
+
+    setLoading("check", true);
+    hide("upload-error");
+
+    const fd = new FormData();
+    fd.append("file", selectedFile);
+
+    try {
+      const res = await fetch(`${API}/api/validate-selfie`, { method: "POST", body: fd });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showBanner("upload-error", data.detail || "Something went wrong.");
+        return;
+      }
+
+      if (data.passed) {
+        // Selfie is good — show it straight in the result
+        const dataUrl = await readFileAsDataURL(selectedFile);
+        showResult("selfie", dataUrl, "Selfie passed all checks");
+      } else {
+        // Show sharecode step
+        setStep(2);
+        show("section-sharecode");
+        hide("section-upload");
+        const list = document.getElementById("fail-list");
+        list.innerHTML = data.reasons.map(r => `<li>${r}</li>`).join("");
+      }
+    } catch {
+      showBanner("upload-error", "Could not connect to the server.");
+    } finally {
+      setLoading("check", false);
+    }
+  }
+
+  // ── Step 2: Fetch from sharecode ────────────────────────────────────────────
+  async function fetchSharecodePhoto() {
+    const shareCode = document.getElementById("share-code").value.trim();
+    const day = document.getElementById("dob-day").value.padStart(2, "0");
+    const month = document.getElementById("dob-month").value.padStart(2, "0");
+    const year = document.getElementById("dob-year").value;
+
+    if (!shareCode || !day || !month || !year) {
+      showBanner("sharecode-error", "Please fill in all fields.");
+      return;
+    }
+
+    setLoading("fetch", true);
+    hide("sharecode-error");
+
+    try {
+      const res = await fetch(`${API}/api/sharecode-photo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ share_code: shareCode, date_of_birth: `${year}-${month}-${day}` }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showBanner("sharecode-error", data.detail || "Could not retrieve photo. Check your share code and date of birth.");
+        return;
+      }
+
+      showResult("sharecode", data.photo, "Photo retrieved from share code record");
+    } catch {
+      showBanner("sharecode-error", "Could not connect to the server.");
+    } finally {
+      setLoading("fetch", false);
+    }
+  }
+
+  // ── Show result ─────────────────────────────────────────────────────────────
+  function showResult(source, photoDataUrl, subtitle) {
+    setStep(3);
+    hide("section-upload");
+    hide("section-sharecode");
+    show("section-result");
+
+    document.getElementById("result-subtitle").textContent = subtitle;
+
+    const sourceLabel = source === "selfie" ? "Original selfie ✓" : "Share code record";
+    const badgeClass = source === "selfie" ? "selfie" : "sharecode";
+    document.getElementById("result-source-label").innerHTML =
+      `<span class="source-badge ${badgeClass}">${sourceLabel}</span>`;
+
+    if (photoDataUrl) {
+      const img = document.getElementById("result-photo");
+      img.src = photoDataUrl;
+      img.style.display = "block";
+      hide("result-placeholder");
+      const dl = document.getElementById("download-photo");
+      dl.href = photoDataUrl;
+      dl.style.display = "inline-flex";
+    }
+  }
+
+  // ── Reset ───────────────────────────────────────────────────────────────────
+  function startOver() {
+    selectedFile = null;
+    fileInput.value = "";
+    document.getElementById("preview-wrap").style.display = "none";
+    document.getElementById("preview-img").src = "";
+    document.getElementById("check-btn").disabled = true;
+    document.getElementById("share-code").value = "";
+    document.getElementById("dob-day").value = "";
+    document.getElementById("dob-month").value = "";
+    document.getElementById("dob-year").value = "";
+    ["upload-error","sharecode-error","fail-reasons"].forEach(hide);
+    document.getElementById("fail-reasons").style.display = "none";
+    document.getElementById("result-photo").style.display = "none";
+    document.getElementById("result-placeholder").style.display = "flex";
+    document.getElementById("download-photo").style.display = "none";
+    setStep(1);
+    show("section-upload");
+    hide("section-sharecode");
+    hide("section-result");
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  function setStep(n) {
+    for (let i = 1; i <= 3; i++) {
+      const el = document.getElementById(`step${i}`);
+      el.classList.remove("active", "done");
+      if (i < n) el.classList.add("done");
+      else if (i === n) el.classList.add("active");
+    }
+    for (let i = 1; i <= 2; i++) {
+      const line = document.getElementById(`line${i}`);
+      line.classList.toggle("done", i < n);
+    }
+  }
+
+  function show(id) { document.getElementById(id).style.display = ""; }
+  function hide(id) { document.getElementById(id).style.display = "none"; }
+  function showBanner(id, msg) {
+    const el = document.getElementById(id);
+    el.innerHTML = msg;
+    el.style.display = "block";
+  }
+
+  function setLoading(which, on) {
+    const btn = document.getElementById(`${which}-btn`);
+    const spinner = document.getElementById(`${which}-spinner`);
+    const text = document.getElementById(`${which}-text`);
+    btn.disabled = on;
+    spinner.style.display = on ? "block" : "none";
+    if (which === "check") text.textContent = on ? "Checking…" : "Check selfie";
+    if (which === "fetch") text.textContent = on ? "Retrieving photo…" : "Retrieve photo";
+  }
+
+  function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
+</script>
+</body>
+</html>
