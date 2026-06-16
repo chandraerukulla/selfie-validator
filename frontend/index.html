@@ -315,7 +315,49 @@
     }
     .step-line.done { background: var(--green); }
 
+    /* ── Scores ── */
+    .scores-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    .score-tile {
+      background: var(--grey-50);
+      border: 1.5px solid var(--grey-200);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .score-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--grey-400);
+      margin-bottom: 8px;
+    }
+    .score-bar-wrap {
+      height: 6px;
+      background: var(--grey-200);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .score-bar {
+      height: 100%;
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.6s ease, background 0.3s;
+    }
+    .score-bar.pass { background: var(--green); }
+    .score-bar.fail { background: var(--red); }
+    .score-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--grey-900);
+    }
+
     @media (max-width: 520px) {
+      .scores-grid { grid-template-columns: 1fr; }
       .card { padding: 24px 20px; }
       .result-hero { flex-direction: column; align-items: flex-start; gap: 16px; }
       .dob-row { grid-template-columns: 1fr 1fr 1fr; }
@@ -450,6 +492,30 @@
       </div>
     </div>
 
+    <!-- Scores -->
+    <div id="scores-section" style="display:none">
+      <hr class="divider" />
+      <div style="font-size:13px;font-weight:600;color:var(--grey-600);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Selfie scores</div>
+      <div class="scores-grid">
+        <div class="score-tile">
+          <div class="score-label">Sharpness</div>
+          <div class="score-bar-wrap"><div class="score-bar" id="bar-blur"></div></div>
+          <div class="score-value" id="val-blur">—</div>
+        </div>
+        <div class="score-tile">
+          <div class="score-label">Eye openness</div>
+          <div class="score-bar-wrap"><div class="score-bar" id="bar-eye"></div></div>
+          <div class="score-value" id="val-eye">—</div>
+        </div>
+        <div class="score-tile">
+          <div class="score-label">Facing forward</div>
+          <div class="score-bar-wrap"><div class="score-bar" id="bar-sym"></div></div>
+          <div class="score-value" id="val-sym">—</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
     <button class="btn-ghost" onclick="startOver()">← Start again</button>
   </div>
 
@@ -515,16 +581,14 @@
       }
 
       if (data.passed) {
-        // Selfie is good — show it straight in the result
         const dataUrl = await readFileAsDataURL(selectedFile);
-        showResult("selfie", dataUrl, "Selfie passed all checks");
+        showResult("selfie", dataUrl, "Selfie passed all checks", data.scores);
       } else {
-        // Show sharecode step
         setStep(2);
         show("section-sharecode");
         hide("section-upload");
-        const list = document.getElementById("fail-list");
-        list.innerHTML = data.reasons.map(r => `<li>${r}</li>`).join("");
+        document.getElementById("fail-list").innerHTML = data.reasons.map(r => `<li>${r}</li>`).join("");
+        renderScores(data.scores);
       }
     } catch {
       showBanner("upload-error", "Could not connect to the server.");
@@ -570,7 +634,34 @@
   }
 
   // ── Show result ─────────────────────────────────────────────────────────────
-  function showResult(source, photoDataUrl, subtitle) {
+  function renderScores(scores) {
+    if (!scores) return;
+    show("scores-section");
+
+    // Blur: raw Laplacian variance — cap display at 300 for the bar
+    const blurPct = Math.min((scores.blur / 300) * 100, 100);
+    const blurPass = scores.blur >= 100;
+    setScoreBar("blur", blurPct, blurPass, scores.blur.toFixed(0));
+
+    // Eye openness: 0–0.4 range, threshold 0.22
+    const eyePct = Math.min((scores.eye_openness / 0.4) * 100, 100);
+    const eyePass = scores.eye_openness >= 0.22;
+    setScoreBar("eye", eyePct, eyePass, scores.eye_openness.toFixed(3));
+
+    // Symmetry: already 0–1, threshold 0.75
+    const symPct = scores.symmetry * 100;
+    const symPass = scores.symmetry >= 0.75;
+    setScoreBar("sym", symPct, symPass, scores.symmetry.toFixed(2));
+  }
+
+  function setScoreBar(key, pct, pass, label) {
+    const bar = document.getElementById(`bar-${key}`);
+    bar.style.width = pct + "%";
+    bar.className = "score-bar " + (pass ? "pass" : "fail");
+    document.getElementById(`val-${key}`).textContent = label;
+  }
+
+  function showResult(source, photoDataUrl, subtitle, scores) {
     setStep(3);
     hide("section-upload");
     hide("section-sharecode");
@@ -592,6 +683,8 @@
       dl.href = photoDataUrl;
       dl.style.display = "inline-flex";
     }
+
+    if (scores) renderScores(scores);
   }
 
   // ── Reset ───────────────────────────────────────────────────────────────────
@@ -610,6 +703,7 @@
     document.getElementById("result-photo").style.display = "none";
     document.getElementById("result-placeholder").style.display = "flex";
     document.getElementById("download-photo").style.display = "none";
+    hide("scores-section");
     setStep(1);
     show("section-upload");
     hide("section-sharecode");
