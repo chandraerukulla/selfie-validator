@@ -11,6 +11,12 @@ from pydantic import BaseModel
 
 app = FastAPI(title="Selfie Validator")
 
+
+@app.get("/")
+async def root():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/docs")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
