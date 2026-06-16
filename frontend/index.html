@@ -621,9 +621,19 @@
       const data = await res.json();
 
       if (!res.ok) {
-        showBanner("sharecode-error", data.detail || "Could not retrieve photo. Check your share code and date of birth.");
+        const detail = data.detail || {};
+        const msg = detail.message || data.detail || "Could not retrieve photo. Please check your details and try again.";
+        const code = detail.code || "";
+        showBanner("sharecode-error", msg);
+        // Highlight the offending field
+        document.getElementById("share-code").style.borderColor = (code === "invalid_share_code") ? "var(--red)" : "";
+        document.getElementById("dob-day").style.borderColor = (code === "dob_mismatch") ? "var(--red)" : "";
+        document.getElementById("dob-month").style.borderColor = (code === "dob_mismatch") ? "var(--red)" : "";
+        document.getElementById("dob-year").style.borderColor = (code === "dob_mismatch") ? "var(--red)" : "";
         return;
       }
+      // Clear any field highlights on success
+      ["share-code","dob-day","dob-month","dob-year"].forEach(id => document.getElementById(id).style.borderColor = "");
 
       showResult("sharecode", data.photo, "Photo retrieved from share code record");
     } catch {

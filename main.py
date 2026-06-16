@@ -108,12 +108,24 @@ def _validate_image_bytes(data: bytes) -> dict:
 
 # ── Sharecode photo retrieval (reuses visa_website logic) ────────────────────
 
+class SharecodeError(Exception):
+    """Structured error from the sharecode lookup flow."""
+    def __init__(self, code: str, message: str):
+        self.code = code
+        self.message = message
+        super().__init__(message)
+
+
 async def _fetch_photo_from_sharecode(share_code: str, date_of_birth: str) -> str:
-    """Returns the photo as a data URI (data:image/jpeg;base64,...) or raises."""
+    """Returns the photo as a data URI (data:image/jpeg;base64,...) or raises SharecodeError."""
     share_code = share_code.replace(" ", "").upper()
+
+    if len(share_code) != 9 or not share_code.isalnum():
+        raise SharecodeError("invalid_share_code", "Share code must be 9 characters, letters and numbers only (e.g. W9X3M2T4K).")
+
     parts = date_of_birth.split("-")
     if len(parts) != 3:
-        raise ValueError("date_of_birth must be YYYY-MM-DD")
+        raise SharecodeError("invalid_dob", "Date of birth must be in YYYY-MM-DD format.")
     year, month, day = parts
 
     async with async_playwright() as p:
@@ -125,7 +137,11 @@ async def _fetch_photo_from_sharecode(share_code: str, date_of_birth: str) -> st
                 await page.locator('button:visible:has-text("Continue")').click()
                 await page.wait_for_load_state("networkidle", timeout=30000)
 
-            await page.goto(f"{BASE_URL}/view/checker-details", wait_until="networkidle")
+            try:
+                await page.goto(f"{BASE_URL}/view/checker-details", wait_until="networkidle", timeout=15000)
+            except Exception:
+                raise SharecodeError("timeout", "Could not reach the UK immigration service. Please try again in a moment.")
+
             await page.fill('input[name="shareCode"]', share_code)
             await click_continue()
 
@@ -136,8 +152,12 @@ async def _fetch_photo_from_sharecode(share_code: str, date_of_birth: str) -> st
 
             error_el = await page.query_selector(".govuk-error-summary")
             if error_el:
-                msg = await error_el.inner_text()
-                raise ValueError(msg.strip())
+                raw = (await error_el.inner_text()).strip().lower()
+                if "share code" in raw or "sharecode" in raw:
+                    raise SharecodeError("invalid_share_code", "That share code was not recognised. Please check it and try again.")
+                if "date of birth" in raw or "dob" in raw:
+                    raise SharecodeError("dob_mismatch", "The date of birth does not match the share code. Please check both and try again.")
+                raise SharecodeError("lookup_failed", "The share code and date of birth could not be verified. Please check your details.")
 
             await page.fill('input[name="jobTitle"]', JOB_TITLE)
             await page.fill('input[name="companyName"]', ORGANISATION_NAME)
@@ -148,16 +168,19 @@ async def _fetch_photo_from_sharecode(share_code: str, date_of_birth: str) -> st
 
             error_el = await page.query_selector(".govuk-error-summary")
             if error_el:
-                msg = await error_el.inner_text()
-                raise ValueError(msg.strip())
+                raise SharecodeError("lookup_failed", "Something went wrong retrieving the immigration record. Please try again.")
 
             photo_el = await page.query_selector("img#photo")
             if not photo_el:
-                raise ValueError("No photo found on the status page")
+                raise SharecodeError("no_photo", "No photo was found on this immigration record.")
 
             photo_src = await photo_el.get_attribute("src")
-            return photo_src  # data:image/jpeg;base64,...
+            return photo_src
 
+        except SharecodeError:
+            raise
+        except Exception as e:
+            raise SharecodeError("unexpected", "An unexpected error occurred. Please try again.") from e
         finally:
             await browser.close()
 
@@ -193,10 +216,10 @@ async def sharecode_photo(payload: SharecodePhotoRequest):
     """
     try:
         photo = await _fetch_photo_from_sharecode(payload.share_code, payload.date_of_birth)
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+    except SharecodeError as e:
+        raise HTTPException(status_code=422, detail={"code": e.code, "message": e.message})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail={"code": "unexpected", "message": "An unexpected error occurred. Please try again."})
     return {"photo": photo}
 
 
@@ -247,10 +270,10 @@ async def process_selfie(
     # Fetch from sharecode
     try:
         photo = await _fetch_photo_from_sharecode(share_code, date_of_birth)
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+    except SharecodeError as e:
+        raise HTTPException(status_code=422, detail={"code": e.code, "message": e.message})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail={"code": "unexpected", "message": "An unexpected error occurred. Please try again."})
 
     return {
         "status": "ok",
