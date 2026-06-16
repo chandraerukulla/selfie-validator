@@ -33,7 +33,7 @@ app.add_middleware(
 # ── Thresholds (tunable) ─────────────────────────────────────────────────────
 BLUR_THRESHOLD = 100.0   # Laplacian variance — below this = blurry
 EAR_THRESHOLD = 0.22     # Eye Aspect Ratio — below this = eyes closed
-SYMMETRY_THRESHOLD = 0.75  # Nose-to-face-edge ratio — below this = not facing forward
+SYMMETRY_THRESHOLD = 0.60  # Nose-to-face-edge ratio — below this = not facing forward
 
 BASE_URL = "https://view-immigration-status.service.gov.uk"
 JOB_TITLE = "Verification team"
